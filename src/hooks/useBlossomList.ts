@@ -22,45 +22,81 @@ export function useBlossomList(serverUrl: string, pubkey: string) {
     queryKey: ['blossom-list', serverUrl, pubkey],
     queryFn: async (): Promise<BlobDescriptor[]> => {
       if (!user) {
-        throw new Error('User must be logged in to list blobs');
+        console.log('useBlossomList: User not logged in');
+        return [];
       }
 
       // Normalize URL
       const url = serverUrl.endsWith('/') ? serverUrl.slice(0, -1) : serverUrl;
 
-      // Create authorization event (BUD-02)
-      const authEvent = await nostr.event({
-        kind: 24242,
-        content: 'List Blobs',
-        tags: [
-          ['t', 'list'],
-          ['expiration', Math.floor(Date.now() / 1000 + 60).toString()], // 1 minute expiration
-        ],
-      });
+      console.log('useBlossomList: Fetching from', `${url}/list/${pubkey}`);
 
-      // Base64 encode the event
-      const authHeader = `Nostr ${btoa(JSON.stringify(authEvent))}`;
+      try {
+        // First try without authentication (some servers allow it)
+        console.log('useBlossomList: Trying without auth...');
+        let response = await fetch(`${url}/list/${pubkey}`, {
+          method: 'GET',
+        });
 
-      // Fetch the list
-      const response = await fetch(`${url}/list/${pubkey}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': authHeader,
-        },
-      });
+        console.log('useBlossomList: Response status (no auth)', response.status);
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          // No blobs found, return empty array
-          return [];
+        // If 401, try with authentication
+        if (response.status === 401) {
+          console.log('useBlossomList: 401 received, trying with auth...');
+          console.log('useBlossomList: Creating auth event...');
+          
+          // Create authorization event (BUD-02) with timeout
+          const authEvent = await Promise.race([
+            nostr.event({
+              kind: 24242,
+              content: 'List Blobs',
+              tags: [
+                ['t', 'list'],
+                ['expiration', Math.floor(Date.now() / 1000 + 60).toString()], // 1 minute expiration
+              ],
+            }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Auth event creation timed out after 30s. Please check your Nostr signer extension.')), 30000)
+            )
+          ]) as Awaited<ReturnType<typeof nostr.event>>;
+
+          console.log('useBlossomList: Auth event created', authEvent);
+
+          // Base64 encode the event
+          const authHeader = `Nostr ${btoa(JSON.stringify(authEvent))}`;
+
+          // Retry with auth
+          response = await fetch(`${url}/list/${pubkey}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': authHeader,
+            },
+          });
+
+          console.log('useBlossomList: Response status (with auth)', response.status);
         }
-        throw new Error(`Failed to fetch blobs: ${response.statusText}`);
-      }
 
-      const blobs: BlobDescriptor[] = await response.json();
-      return blobs;
+        if (!response.ok) {
+          if (response.status === 404) {
+            // No blobs found, return empty array
+            console.log('useBlossomList: 404 - No blobs found');
+            return [];
+          }
+          const errorText = await response.text();
+          console.error('useBlossomList: Error response', errorText);
+          throw new Error(`Failed to fetch blobs: ${response.statusText} - ${errorText}`);
+        }
+
+        const blobs: BlobDescriptor[] = await response.json();
+        console.log('useBlossomList: Retrieved blobs', blobs.length, blobs);
+        return blobs;
+      } catch (error) {
+        console.error('useBlossomList: Error in queryFn', error);
+        throw error;
+      }
     },
     enabled: !!serverUrl && !!pubkey && !!user,
     staleTime: 30 * 1000, // 30 seconds
+    retry: 1,
   });
 }

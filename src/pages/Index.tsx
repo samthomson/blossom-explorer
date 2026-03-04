@@ -36,6 +36,7 @@ import { formatBytes } from '@/lib/formatBytes';
 import { formatDistance } from 'date-fns';
 
 const POPULAR_SERVERS = [
+  'https://bs.samt.st',
   'https://cdn.satellite.earth',
   'https://nostr.download',
   'https://blossom.primal.net',
@@ -47,8 +48,8 @@ const Index = () => {
     description: 'Explore Blossom servers, browse uploaded files, and manage your media storage on the Nostr network.',
   });
 
-  const [serverUrl, setServerUrl] = useState('');
-  const [activeServer, setActiveServer] = useState('');
+  const [serverUrl, setServerUrl] = useState('https://bs.samt.st');
+  const [activeServer, setActiveServer] = useState('https://bs.samt.st');
   const { user } = useCurrentUser();
 
   const handleConnect = () => {
