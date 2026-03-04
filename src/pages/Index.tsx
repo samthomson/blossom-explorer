@@ -1,11 +1,9 @@
 import { useSeoMeta } from '@unhead/react';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useBlossomList } from '@/hooks/useBlossomList';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { LoginArea } from '@/components/auth/LoginArea';
@@ -21,16 +19,15 @@ import {
   Music,
   FileIcon,
   AlertCircle,
-  Flower2,
-  ExternalLink
+  Download
 } from 'lucide-react';
 import { formatBytes } from '@/lib/formatBytes';
 import { formatDistance } from 'date-fns';
 
 const Index = () => {
   useSeoMeta({
-    title: 'Blossom Explorer - Browse Nostr File Storage',
-    description: 'Explore Blossom servers and browse uploaded files on the Nostr network.',
+    title: 'Blossom Explorer',
+    description: 'Browse files on Blossom servers.',
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -42,6 +39,9 @@ const Index = () => {
     user?.pubkey || ''
   );
 
+  // Sort by newest first
+  const sortedBlobs = blobs ? [...blobs].sort((a, b) => (b.uploaded || 0) - (a.uploaded || 0)) : [];
+
   useEffect(() => {
     if (serverUrl) {
       setSearchParams({ server: serverUrl });
@@ -51,83 +51,50 @@ const Index = () => {
   const totalSize = blobs?.reduce((acc, b) => acc + (b.size || 0), 0) || 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-purple-950">
-      {/* Header */}
-      <div className="relative overflow-hidden border-b bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-        <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-pink-500/10" />
-        <div className="container mx-auto px-4 py-12 relative">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Flower2 className="h-12 w-12 text-pink-600 dark:text-pink-400" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Blossom Explorer
-            </h1>
-          </div>
-          <p className="text-center text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-            Browse and explore file storage servers on the Nostr network
-          </p>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
         {/* Server Input */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Server URL (e.g., https://bs.samt.st)"
-                value={serverUrl}
-                onChange={(e) => setServerUrl(e.target.value)}
-                className="font-mono text-sm"
-              />
-              <div className="flex items-center gap-2">
-                <LoginArea className="max-w-fit" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats and Upload */}
-        {user && blobs && blobs.length > 0 && (
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                <span>{blobs.length} files</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <HardDrive className="h-4 w-4" />
-                <span>{formatBytes(totalSize)}</span>
-              </div>
-            </div>
+        <div className="mb-4 flex items-center gap-2">
+          <Input
+            placeholder="Server URL"
+            value={serverUrl}
+            onChange={(e) => setServerUrl(e.target.value)}
+            className="flex-1 font-mono text-sm"
+          />
+          {!user ? (
+            <LoginArea className="max-w-fit" />
+          ) : (
             <BlobUploadDialog serverUrl={serverUrl} />
+          )}
+        </div>
+
+        {/* Stats */}
+        {user && blobs && blobs.length > 0 && (
+          <div className="mb-4 flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <Database className="h-3.5 w-3.5" />
+              <span>{blobs.length} files</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <HardDrive className="h-3.5 w-3.5" />
+              <span>{formatBytes(totalSize)}</span>
+            </div>
           </div>
         )}
 
         {/* Login Alert */}
         {!user && (
-          <Alert className="mb-6">
+          <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Log in to view your uploaded files on this server
+              Log in to view files
             </AlertDescription>
           </Alert>
         )}
 
         {/* Loading State */}
         {user && blobsLoading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i}>
-                <CardContent className="p-0">
-                  <Skeleton className="h-48 w-full rounded-t-lg" />
-                  <div className="p-3 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <div className="text-sm text-muted-foreground">Loading...</div>
         )}
 
         {/* Error State */}
@@ -135,56 +102,44 @@ const Index = () => {
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Failed to load files: {blobsError.message}
+              {blobsError.message}
             </AlertDescription>
           </Alert>
         )}
 
         {/* Empty State */}
         {user && !blobsLoading && !blobsError && blobs && blobs.length === 0 && (
-          <Card className="border-dashed">
-            <CardContent className="py-16 text-center">
-              <FileIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-semibold mb-2 text-muted-foreground">
-                No files found
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Upload your first file to get started
-              </p>
-              <BlobUploadDialog serverUrl={serverUrl} />
-            </CardContent>
-          </Card>
+          <div className="text-sm text-muted-foreground">No files found</div>
         )}
 
-        {/* Blob Grid */}
-        {user && !blobsLoading && !blobsError && blobs && blobs.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {blobs.map((blob) => (
-              <BlobCard key={blob.sha256} blob={blob} />
-            ))}
+        {/* File List */}
+        {user && !blobsLoading && !blobsError && sortedBlobs && sortedBlobs.length > 0 && (
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-2 text-xs font-medium text-muted-foreground w-12"></th>
+                  <th className="text-left p-2 text-xs font-medium text-muted-foreground">Name</th>
+                  <th className="text-left p-2 text-xs font-medium text-muted-foreground">Type</th>
+                  <th className="text-left p-2 text-xs font-medium text-muted-foreground">Size</th>
+                  <th className="text-left p-2 text-xs font-medium text-muted-foreground">Modified</th>
+                  <th className="w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedBlobs.map((blob) => (
+                  <BlobRow key={blob.sha256} blob={blob} />
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-
-        {/* Footer */}
-        <div className="mt-12 text-center text-sm text-muted-foreground">
-          <p>
-            Vibed with{' '}
-            <a 
-              href="https://shakespeare.diy" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-pink-600 dark:text-pink-400 hover:underline"
-            >
-              Shakespeare
-            </a>
-          </p>
-        </div>
       </div>
     </div>
   );
 };
 
-interface BlobCardProps {
+interface BlobRowProps {
   blob: {
     sha256: string;
     url?: string;
@@ -194,14 +149,14 @@ interface BlobCardProps {
   };
 }
 
-function BlobCard({ blob }: BlobCardProps) {
+function BlobRow({ blob }: BlobRowProps) {
   const getFileIcon = (type?: string) => {
-    if (!type) return <FileIcon className="h-8 w-8 text-muted-foreground" />;
-    if (type.startsWith('image/')) return <ImageIcon className="h-8 w-8 text-blue-600" />;
-    if (type.startsWith('video/')) return <Video className="h-8 w-8 text-purple-600" />;
-    if (type.startsWith('audio/')) return <Music className="h-8 w-8 text-green-600" />;
-    if (type.includes('text') || type.includes('pdf')) return <FileText className="h-8 w-8 text-orange-600" />;
-    return <FileIcon className="h-8 w-8 text-muted-foreground" />;
+    if (!type) return <FileIcon className="h-4 w-4 text-muted-foreground" />;
+    if (type.startsWith('image/')) return <ImageIcon className="h-4 w-4 text-blue-600" />;
+    if (type.startsWith('video/')) return <Video className="h-4 w-4 text-purple-600" />;
+    if (type.startsWith('audio/')) return <Music className="h-4 w-4 text-green-600" />;
+    if (type.includes('text') || type.includes('pdf')) return <FileText className="h-4 w-4 text-orange-600" />;
+    return <FileIcon className="h-4 w-4 text-muted-foreground" />;
   };
 
   const isImage = blob.type?.startsWith('image/');
@@ -209,68 +164,67 @@ function BlobCard({ blob }: BlobCardProps) {
 
   return (
     <BlobDetailDialog blob={blob}>
-      <Card className="group cursor-pointer hover:shadow-lg transition-all overflow-hidden">
-        <CardContent className="p-0">
-          {/* Preview */}
-          <div className="relative h-48 bg-muted/50 flex items-center justify-center overflow-hidden">
-            {isImage && blob.url && (
+      <tr className="border-b hover:bg-muted/30 cursor-pointer group">
+        <td className="p-2">
+          <div className="w-10 h-10 rounded overflow-hidden bg-muted/50 flex items-center justify-center">
+            {isImage && blob.url ? (
               <img 
                 src={blob.url} 
-                alt={blob.sha256}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                alt=""
+                className="w-full h-full object-cover"
                 loading="lazy"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement!.innerHTML = `<div class="flex items-center justify-center h-full">${getFileIcon(blob.type)}</div>`;
                 }}
               />
-            )}
-            {isVideo && blob.url && (
+            ) : isVideo && blob.url ? (
               <video 
                 src={blob.url}
                 className="w-full h-full object-cover"
                 muted
-                playsInline
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
-            )}
-            {!isImage && !isVideo && (
-              <div className="flex items-center justify-center h-full">
-                {getFileIcon(blob.type)}
-              </div>
-            )}
-            
-            {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-              <ExternalLink className="h-8 w-8 text-white" />
-            </div>
-          </div>
-
-          {/* Info */}
-          <div className="p-3 space-y-1">
-            <p className="font-mono text-xs truncate font-medium">
-              {blob.sha256.substring(0, 20)}...{blob.sha256.substring(blob.sha256.length - 8)}
-            </p>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {blob.size && <span>{formatBytes(blob.size)}</span>}
-              {blob.type && (
-                <>
-                  <span>•</span>
-                  <span className="truncate">{blob.type.split('/')[1]}</span>
-                </>
-              )}
-            </div>
-            {blob.uploaded && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span>{formatDistance(new Date(blob.uploaded * 1000), new Date(), { addSuffix: true })}</span>
-              </div>
+            ) : (
+              getFileIcon(blob.type)
             )}
           </div>
-        </CardContent>
-      </Card>
+        </td>
+        <td className="p-2">
+          <div className="font-mono text-xs truncate max-w-md">
+            {blob.sha256.substring(0, 12)}...{blob.sha256.substring(blob.sha256.length - 8)}
+          </div>
+        </td>
+        <td className="p-2">
+          <div className="text-xs text-muted-foreground">
+            {blob.type?.split('/')[1] || 'unknown'}
+          </div>
+        </td>
+        <td className="p-2">
+          <div className="text-xs text-muted-foreground">
+            {blob.size ? formatBytes(blob.size) : '-'}
+          </div>
+        </td>
+        <td className="p-2">
+          <div className="text-xs text-muted-foreground">
+            {blob.uploaded ? formatDistance(new Date(blob.uploaded * 1000), new Date(), { addSuffix: true }) : '-'}
+          </div>
+        </td>
+        <td className="p-2">
+          {blob.url && (
+            <a 
+              href={blob.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Download className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+            </a>
+          )}
+        </td>
+      </tr>
     </BlobDetailDialog>
   );
 }
