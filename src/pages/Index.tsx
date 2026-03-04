@@ -1,5 +1,5 @@
 import { useSeoMeta } from '@unhead/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useBlossomList } from '@/hooks/useBlossomList';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { LoginArea } from '@/components/auth/LoginArea';
-import { BlobUploadDialog } from '@/components/BlobUploadDialog';
 import { BlobDetailDialog } from '@/components/BlobDetailDialog';
 import { 
   Database, 
@@ -33,6 +32,7 @@ const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [serverUrl, setServerUrl] = useState(searchParams.get('server') || 'https://bs.samt.st');
   const { user } = useCurrentUser();
+  const loginAreaRef = useRef<HTMLDivElement>(null);
 
   const { data: blobs, isLoading: blobsLoading, error: blobsError } = useBlossomList(
     serverUrl,
@@ -62,10 +62,18 @@ const Index = () => {
             className="flex-1 font-mono text-sm"
           />
           {!user ? (
-            <LoginArea className="max-w-fit" />
+            <Button onClick={() => {
+              const loginButton = loginAreaRef.current?.querySelector('button') as HTMLElement;
+              if (loginButton) loginButton.click();
+            }}>
+              Connect
+            </Button>
           ) : (
-            <BlobUploadDialog serverUrl={serverUrl} />
+            <Button disabled>Connected</Button>
           )}
+          <div ref={loginAreaRef} className="hidden">
+            <LoginArea className="max-w-fit" />
+          </div>
         </div>
 
         {/* Stats */}
@@ -118,7 +126,7 @@ const Index = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left p-2 text-xs font-medium text-muted-foreground w-12"></th>
+                  <th className="text-left p-2 text-xs font-medium text-muted-foreground w-20"></th>
                   <th className="text-left p-2 text-xs font-medium text-muted-foreground">Name</th>
                   <th className="text-left p-2 text-xs font-medium text-muted-foreground">Type</th>
                   <th className="text-left p-2 text-xs font-medium text-muted-foreground">Size</th>
@@ -166,7 +174,7 @@ function BlobRow({ blob }: BlobRowProps) {
     <BlobDetailDialog blob={blob}>
       <tr className="border-b hover:bg-muted/30 cursor-pointer group">
         <td className="p-2">
-          <div className="w-10 h-10 rounded overflow-hidden bg-muted/50 flex items-center justify-center">
+          <div className="w-16 h-16 rounded overflow-hidden bg-muted/50 flex items-center justify-center">
             {isImage && blob.url ? (
               <img 
                 src={blob.url} 
@@ -178,10 +186,11 @@ function BlobRow({ blob }: BlobRowProps) {
                 }}
               />
             ) : isVideo && blob.url ? (
-              <video 
-                src={blob.url}
+              <img 
+                src={`${blob.url}#t=0.1`}
+                alt=""
                 className="w-full h-full object-cover"
-                muted
+                loading="lazy"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
