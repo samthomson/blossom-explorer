@@ -88,8 +88,20 @@ export function useBlossomList(serverUrl: string, pubkey: string) {
         }
 
         const blobs: BlobDescriptor[] = await response.json();
-        console.log('useBlossomList: Retrieved blobs', blobs.length, blobs);
-        return blobs;
+        
+        // Fix HTTP URLs to HTTPS if server is accessed via HTTPS
+        const fixedBlobs = blobs.map(blob => {
+          if (blob.url && blob.url.startsWith('http://') && serverUrl.startsWith('https://')) {
+            return {
+              ...blob,
+              url: blob.url.replace('http://', 'https://')
+            };
+          }
+          return blob;
+        });
+        
+        console.log('useBlossomList: Retrieved blobs', fixedBlobs.length, fixedBlobs);
+        return fixedBlobs;
       } catch (error) {
         console.error('useBlossomList: Error in queryFn', error);
         throw error;
