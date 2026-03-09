@@ -21,8 +21,8 @@ export function useBlossomList(serverUrl: string, pubkey: string) {
   return useQuery({
     queryKey: ['blossom-list', serverUrl, pubkey],
     queryFn: async (): Promise<BlobDescriptor[]> => {
-      if (!user) {
-        console.log('useBlossomList: User not logged in');
+      if (!pubkey) {
+        console.log('useBlossomList: No pubkey provided');
         return [];
       }
 
@@ -95,7 +95,7 @@ export function useBlossomList(serverUrl: string, pubkey: string) {
         throw error;
       }
     },
-    enabled: !!serverUrl && !!pubkey && !!user,
+    enabled: !!serverUrl && !!pubkey,
     staleTime: 30 * 1000, // 30 seconds
     retry: 1,
   });

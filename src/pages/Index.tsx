@@ -5,8 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useBlossomList } from '@/hooks/useBlossomList';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { LoginArea } from '@/components/auth/LoginArea';
 import { BlobDetailDialog } from '@/components/BlobDetailDialog';
 import { 
   Database, 
@@ -31,29 +29,29 @@ const Index = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [serverUrl, setServerUrl] = useState(searchParams.get('server') || 'https://bs.samt.st');
-  const { user } = useCurrentUser();
-  const loginAreaRef = useRef<HTMLDivElement>(null);
+  const [pubkey, setPubkey] = useState(searchParams.get('pubkey') || '');
 
   const { data: blobs, isLoading: blobsLoading, error: blobsError } = useBlossomList(
     serverUrl,
-    user?.pubkey || ''
+    pubkey
   );
 
   // Sort by newest first
   const sortedBlobs = blobs ? [...blobs].sort((a, b) => (b.uploaded || 0) - (a.uploaded || 0)) : [];
 
   useEffect(() => {
-    if (serverUrl) {
-      setSearchParams({ server: serverUrl });
-    }
-  }, [serverUrl, setSearchParams]);
+    const params: Record<string, string> = {};
+    if (serverUrl) params.server = serverUrl;
+    if (pubkey) params.pubkey = pubkey;
+    setSearchParams(params);
+  }, [serverUrl, pubkey, setSearchParams]);
 
   const totalSize = blobs?.reduce((acc, b) => acc + (b.size || 0), 0) || 0;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6 max-w-6xl">
-        {/* Server Input */}
+        {/* Server and Pubkey Input */}
         <div className="mb-4 flex items-center gap-2">
           <Input
             placeholder="Server URL"
@@ -61,23 +59,16 @@ const Index = () => {
             onChange={(e) => setServerUrl(e.target.value)}
             className="flex-1 font-mono text-sm"
           />
-          {!user ? (
-            <Button onClick={() => {
-              const loginButton = loginAreaRef.current?.querySelector('button') as HTMLElement;
-              if (loginButton) loginButton.click();
-            }}>
-              Connect
-            </Button>
-          ) : (
-            <Button disabled>Connected</Button>
-          )}
-          <div ref={loginAreaRef} className="hidden">
-            <LoginArea className="max-w-fit" />
-          </div>
+          <Input
+            placeholder="Pubkey (optional)"
+            value={pubkey}
+            onChange={(e) => setPubkey(e.target.value)}
+            className="flex-1 font-mono text-sm"
+          />
         </div>
 
         {/* Stats */}
-        {user && blobs && blobs.length > 0 && (
+        {blobs && blobs.length > 0 && (
           <div className="mb-4 flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <Database className="h-3.5 w-3.5" />
@@ -90,23 +81,13 @@ const Index = () => {
           </div>
         )}
 
-        {/* Login Alert */}
-        {!user && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Log in to view files
-            </AlertDescription>
-          </Alert>
-        )}
-
         {/* Loading State */}
-        {user && blobsLoading && (
+        {blobsLoading && (
           <div className="text-sm text-muted-foreground">Loading...</div>
         )}
 
         {/* Error State */}
-        {user && blobsError && (
+        {blobsError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -116,12 +97,17 @@ const Index = () => {
         )}
 
         {/* Empty State */}
-        {user && !blobsLoading && !blobsError && blobs && blobs.length === 0 && (
-          <div className="text-sm text-muted-foreground">No files found</div>
+        {!blobsLoading && !blobsError && blobs && blobs.length === 0 && pubkey && (
+          <div className="text-sm text-muted-foreground">No files found for this pubkey</div>
+        )}
+
+        {/* No Pubkey State */}
+        {!pubkey && !blobsLoading && (
+          <div className="text-sm text-muted-foreground">Enter a pubkey to view files</div>
         )}
 
         {/* File List */}
-        {user && !blobsLoading && !blobsError && sortedBlobs && sortedBlobs.length > 0 && (
+        {!blobsLoading && !blobsError && sortedBlobs && sortedBlobs.length > 0 && (
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
               <thead>
