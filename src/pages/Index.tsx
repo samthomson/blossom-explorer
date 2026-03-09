@@ -29,7 +29,7 @@ const Index = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [serverUrl, setServerUrl] = useState(searchParams.get('server') || 'https://bs.samt.st');
-  const [pubkey, setPubkey] = useState(searchParams.get('pubkey') || '');
+  const [pubkey, setPubkey] = useState(searchParams.get('pubkey') || '2093baa8621c5b255e8f4fc2c6fdfc10d8a5598a25517664efaba860735f1030');
 
   const { data: blobs, isLoading: blobsLoading, error: blobsError } = useBlossomList(
     serverUrl,
