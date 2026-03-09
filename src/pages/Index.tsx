@@ -16,7 +16,8 @@ import {
   Music,
   FileIcon,
   AlertCircle,
-  Download
+  Download,
+  RefreshCw
 } from 'lucide-react';
 import { formatBytes } from '@/lib/formatBytes';
 import { formatDistance } from 'date-fns';
@@ -31,7 +32,7 @@ const Index = () => {
   const [serverUrl, setServerUrl] = useState(searchParams.get('server') || 'https://bs.samt.st');
   const [pubkey, setPubkey] = useState(searchParams.get('pubkey') || '2093baa8621c5b255e8f4fc2c6fdfc10d8a5598a25517664efaba860735f1030');
 
-  const { data: blobs, isLoading: blobsLoading, error: blobsError } = useBlossomList(
+  const { data: blobs, isLoading: blobsLoading, error: blobsError, refetch } = useBlossomList(
     serverUrl,
     pubkey
   );
@@ -69,15 +70,26 @@ const Index = () => {
 
         {/* Stats */}
         {blobs && blobs.length > 0 && (
-          <div className="mb-4 flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <Database className="h-3.5 w-3.5" />
-              <span>{blobs.length} files</span>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Database className="h-3.5 w-3.5" />
+                <span>{blobs.length} files</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <HardDrive className="h-3.5 w-3.5" />
+                <span>{formatBytes(totalSize)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <HardDrive className="h-3.5 w-3.5" />
-              <span>{formatBytes(totalSize)}</span>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={blobsLoading}
+              className="h-7 w-7 p-0"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${blobsLoading ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         )}
 
