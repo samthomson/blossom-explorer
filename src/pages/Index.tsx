@@ -108,25 +108,35 @@ const Index = () => {
 
         {/* File List */}
         {!blobsLoading && !blobsError && sortedBlobs && sortedBlobs.length > 0 && (
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left p-2 text-xs font-medium text-muted-foreground w-20"></th>
-                  <th className="text-left p-2 text-xs font-medium text-muted-foreground">Name</th>
-                  <th className="text-left p-2 text-xs font-medium text-muted-foreground">Type</th>
-                  <th className="text-left p-2 text-xs font-medium text-muted-foreground">Size</th>
-                  <th className="text-left p-2 text-xs font-medium text-muted-foreground">Modified</th>
-                  <th className="w-10"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedBlobs.map((blob) => (
-                  <BlobRow key={blob.sha256} blob={blob} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="border rounded-lg overflow-hidden mb-4">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-2 text-xs font-medium text-muted-foreground w-20"></th>
+                    <th className="text-left p-2 text-xs font-medium text-muted-foreground">Name</th>
+                    <th className="text-left p-2 text-xs font-medium text-muted-foreground">Type</th>
+                    <th className="text-left p-2 text-xs font-medium text-muted-foreground">Size</th>
+                    <th className="text-left p-2 text-xs font-medium text-muted-foreground">Modified</th>
+                    <th className="w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedBlobs.map((blob) => (
+                    <BlobRow key={blob.sha256} blob={blob} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* JSON Debug */}
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm text-muted-foreground mb-2">Raw JSON Response</summary>
+              <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto">
+                {JSON.stringify(sortedBlobs, null, 2)}
+              </pre>
+            </details>
+          </>
         )}
       </div>
     </div>
@@ -172,11 +182,11 @@ function BlobRow({ blob }: BlobRowProps) {
                 }}
               />
             ) : isVideo && blob.url ? (
-              <img 
-                src={`${blob.url}#t=0.1`}
-                alt=""
+              <video 
+                src={blob.url}
                 className="w-full h-full object-cover"
-                loading="lazy"
+                muted
+                preload="metadata"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
